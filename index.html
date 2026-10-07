@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>股票五层反转分析器</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  background: #0b0b0c;
+  color: #f5f5f7;
+}
+
+.container {
+  max-width: 760px;
+  margin: auto;
+  padding: 22px 16px 50px;
+}
+
+h1 {
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: #999;
+  margin-bottom: 20px;
+}
+
+.card {
+  background: #1c1c1e;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+.score {
+  font-size: 54px;
+  font-weight: 700;
+}
+
+.status {
+  display: inline-block;
+  background: #333;
+  padding: 6px 13px;
+  border-radius: 20px;
+  color: #ddd;
+  margin-bottom: 12px;
+}
+
+.progress {
+  width: 100%;
+  height: 10px;
+  background: #3a3a3c;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 14px 0 20px;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #34c759;
+  transition: .25s;
+}
+
+.rule {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 9px 0;
+  font-size: 18px;
+}
+
+.pass { color: #34c759; }
+.fail { color: #999; }
+
+h2 {
+  margin-top: 5px;
+  font-size: 22px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.field {
+  background: #262628;
+  padding: 13px;
+  border-radius: 14px;
+}
+
+.field label {
+  display: block;
+  color: #aaa;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+input[type="number"],
+select {
+  width: 100%;
+  font-size: 20px;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: #3a3a3c;
+  color: white;
+}
+
+.check {
+  display: block;
+  font-size: 17px;
+  padding: 9px 0;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  margin-right: 9px;
+}
+
+.note {
+  color: #888;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 520px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+  h1 { font-size: 24px; }
+  .score { font-size: 48px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>📈 五层反转筛选</h1>
+<div class="subtitle">US & Canadian Stock Reversal Analyzer · V1</div>
+
+<div class="card">
+  <div>符合条件</div>
+  <div class="score"><span id="score">0</span> / 5</div>
+  <div class="status" id="status">等待确认</div>
+
+  <div class="progress">
+    <div class="progress-bar" id="progress"></div>
+  </div>
+
+  <div id="rules"></div>
+</div>
+
+<div class="card">
+
+<h2>1. 价格与均线</h2>
+
+<div class="grid">
+
+<div class="field">
+<label>收盘价</label>
+<input id="close" type="number" value="287" step="0.01">
+</div>
+
+<div class="field">
+<label>MA5</label>
+<input id="ma5" type="number" value="267" step="0.01">
+</div>
+
+<div class="field">
+<label>MA10</label>
+<input id="ma10" type="number" value="239" step="0.01">
+</div>
+
+<div class="field">
+<label>MA20</label>
+<input id="ma20" type="number" value="218" step="0.01">
+</div>
+
+<div class="field">
+<label>MA60</label>
+<input id="ma60" type="number" value="276" step="0.01">
+</div>
+
+<div class="field">
+<label>成交量比率</label>
+<input id="volume" type="number" value="1.0" step="0.1">
+</div>
+
+</div>
+</div>
+
+<div class="card">
+
+<h2>2. 技术信号</h2>
+
+<label class="check">
+<input type="checkbox" id="ma60up">
+MA60 最近5日斜率为正
+</label>
+
+<label class="check">
+<input type="checkbox" id="ma5up">
+MA5 连续3日上升
+</label>
+
+<label class="check">
+<input type="checkbox" id="cross">
+MA5 今日上穿 MA10
+</label>
+
+<hr style="border-color:#333">
+
+<label>止跌K线形态</label>
+
+<select id="pattern">
+<option value="none">没有明显形态</option>
+<option value="hammer">长下影线 / 锤子线</option>
+<option value="engulf">阳包阴</option>
+<option value="morning">晨星</option>
+</select>
+
+<br><br>
+
+<label class="check">
+<input type="checkbox" id="nolow">
+连续3个交易日没有再创新低
+</label>
+
+<label class="check">
+<input type="checkbox" id="bull">
+出现实体涨幅至少2%的阳线
+</label>
+
+</div>
+
+<div class="card">
+<div class="note">
+当前版本用于验证五层反转判断逻辑，并非实时行情。
+下一阶段将加入真实美股/加拿大股票数据、走势图以及历史回测。
+</div>
+</div>
+
+</div>
+
+<script>
+
+const ids = [
+ "close","ma5","ma10","ma20","ma60","volume",
+ "ma60up","ma5up","cross","pattern","nolow","bull"
+];
+
+ids.forEach(id => {
+ document.getElementById(id).addEventListener("input", calculate);
+ document.getElementById(id).addEventListener("change", calculate);
+});
+
+function calculate(){
+
+ const close = +document.getElementById("close").value;
+ const ma5 = +document.getElementById("ma5").value;
+ const ma10 = +document.getElementById("ma10").value;
+ const ma20 = +document.getElementById("ma20").value;
+ const ma60 = +document.getElementById("ma60").value;
+ const volume = +document.getElementById("volume").value;
+
+ const ma60up = document.getElementById("ma60up").checked;
+ const ma5up = document.getElementById("ma5up").checked;
+ const cross = document.getElementById("cross").checked;
+ const pattern = document.getElementById("pattern").value;
+ const nolow = document.getElementById("nolow").checked;
+ const bull = document.getElementById("bull").checked;
+
+ /*
+ Five-layer logic
+ */
+
+ const layer1 =
+   close > ma60 &&
+   ma60up;
+
+ const layer2 =
+   ma5up &&
+   cross &&
+   ma5 > ma10;
+
+ const layer3 =
+   volume >= 1.5 &&
+   close > ma20;
+
+ const layer4 =
+   pattern !== "none";
+
+ const layer5 =
+   nolow &&
+   bull &&
+   volume >= 1.5;
+
+ const results = [
+   ["长期趋势转好", layer1],
+   ["短期均线金叉", layer2],
+   ["放量站上 MA20", layer3],
+   ["出现止跌 K 线", layer4],
+   ["三日止跌 + 放量中阳", layer5]
+ ];
+
+ const score = results.filter(x => x[1]).length;
+
+ document.getElementById("score").textContent = score;
+ document.getElementById("progress").style.width =
+   (score / 5 * 100) + "%";
+
+ let status = "等待确认";
+
+ if(score === 5) status = "强反转候选";
+ else if(score === 4) status = "高度关注";
+ else if(score === 3) status = "开始观察";
+ else if(score >= 1) status = "等待确认";
+
+ document.getElementById("status").textContent = status;
+
+ document.getElementById("rules").innerHTML =
+   results.map(r => `
+     <div class="rule">
+       <span>${r[1] ? "✓" : "○"} ${r[0]}</span>
+       <span class="${r[1] ? "pass":"fail"}">
+         ${r[1] ? "通过":"未通过"}
+       </span>
+     </div>
+   `).join("");
+}
+
+calculate();
+
+</script>
+
+</body>
+</html>
