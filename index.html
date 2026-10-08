@@ -1,346 +1,654 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>股票五层反转分析器</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>美股五层反转分析器 V2</title>
 
-<style>
-* { box-sizing: border-box; }
+  <style>
+    * { box-sizing: border-box; }
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-  background: #0b0b0c;
-  color: #f5f5f7;
-}
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: #0b0b0c;
+      color: #f5f5f7;
+    }
 
-.container {
-  max-width: 760px;
-  margin: auto;
-  padding: 22px 16px 50px;
-}
+    .wrap {
+      max-width: 820px;
+      margin: auto;
+      padding: 24px 16px 50px;
+    }
 
-h1 {
-  font-size: 28px;
-  margin-bottom: 4px;
-}
+    h1 {
+      margin-bottom: 6px;
+      font-size: 28px;
+    }
 
-.subtitle {
-  color: #999;
-  margin-bottom: 20px;
-}
+    .subtitle {
+      color: #9da0a6;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
 
-.card {
-  background: #1c1c1e;
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 18px;
-}
+    .search {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
 
-.score {
-  font-size: 54px;
-  font-weight: 700;
-}
+    input {
+      flex: 1;
+      padding: 14px;
+      font-size: 18px;
+      text-transform: uppercase;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #171719;
+      color: white;
+    }
 
-.status {
-  display: inline-block;
-  background: #333;
-  padding: 6px 13px;
-  border-radius: 20px;
-  color: #ddd;
-  margin-bottom: 12px;
-}
+    button {
+      padding: 0 22px;
+      border: 0;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #2f7cff;
+      color: white;
+    }
 
-.progress {
-  width: 100%;
-  height: 10px;
-  background: #3a3a3c;
-  border-radius: 10px;
-  overflow: hidden;
-  margin: 14px 0 20px;
-}
+    button:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
 
-.progress-bar {
-  height: 100%;
-  width: 0%;
-  background: #34c759;
-  transition: .25s;
-}
+    .status {
+      min-height: 24px;
+      margin-bottom: 15px;
+      color: #aaa;
+    }
 
-.rule {
-  display: flex;
-  justify-content: space-between;
-  gap: 15px;
-  padding: 9px 0;
-  font-size: 18px;
-}
+    .error {
+      color: #ff7070;
+    }
 
-.pass { color: #34c759; }
-.fail { color: #999; }
+    .card {
+      background: #171719;
+      border: 1px solid #29292d;
+      border-radius: 14px;
+      padding: 18px;
+      margin-top: 14px;
+    }
 
-h2 {
-  margin-top: 5px;
-  font-size: 22px;
-}
+    .hidden {
+      display: none;
+    }
 
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
+    .headline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
 
-.field {
-  background: #262628;
-  padding: 13px;
-  border-radius: 14px;
-}
+    .symbol {
+      font-size: 26px;
+      font-weight: 800;
+    }
 
-.field label {
-  display: block;
-  color: #aaa;
-  font-size: 14px;
-  margin-bottom: 6px;
-}
+    .score {
+      font-size: 30px;
+      font-weight: 800;
+    }
 
-input[type="number"],
-select {
-  width: 100%;
-  font-size: 20px;
-  padding: 8px;
-  border: none;
-  border-radius: 8px;
-  background: #3a3a3c;
-  color: white;
-}
+    .verdict {
+      margin-top: 8px;
+      color: #b9bbc0;
+    }
 
-.check {
-  display: block;
-  font-size: 17px;
-  padding: 9px 0;
-}
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
 
-.check input {
-  width: 20px;
-  height: 20px;
-  vertical-align: middle;
-  margin-right: 9px;
-}
+    .metric {
+      background: #111113;
+      padding: 12px;
+      border-radius: 10px;
+    }
 
-.note {
-  color: #888;
-  font-size: 13px;
-  line-height: 1.5;
-}
+    .metric small {
+      color: #888;
+      display: block;
+      margin-bottom: 5px;
+    }
 
-@media (max-width: 520px) {
-  .grid { grid-template-columns: 1fr 1fr; }
-  h1 { font-size: 24px; }
-  .score { font-size: 48px; }
-}
-</style>
+    .metric strong {
+      font-size: 17px;
+    }
+
+    .layer {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 10px;
+      padding: 15px 0;
+      border-bottom: 1px solid #29292d;
+    }
+
+    .layer:last-child {
+      border-bottom: 0;
+    }
+
+    .badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+
+    .pass {
+      background: #123d25;
+      color: #5ee28b;
+    }
+
+    .fail {
+      background: #411b1b;
+      color: #ff7777;
+    }
+
+    .layer-title {
+      font-weight: 750;
+      margin-bottom: 5px;
+    }
+
+    .detail {
+      color: #aaa;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .note {
+      color: #777;
+      font-size: 12px;
+      line-height: 1.5;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .metrics {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .search {
+        flex-direction: column;
+      }
+
+      button {
+        height: 48px;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="container">
+<div class="wrap">
 
-<h1>📈 五层反转筛选</h1>
-<div class="subtitle">US & Canadian Stock Reversal Analyzer · V1</div>
+  <h1>美股五层反转分析器</h1>
 
-<div class="card">
-  <div>符合条件</div>
-  <div class="score"><span id="score">0</span> / 5</div>
-  <div class="status" id="status">等待确认</div>
-
-  <div class="progress">
-    <div class="progress-bar" id="progress"></div>
+  <div class="subtitle">
+    V2 · 输入美股代码，自动读取日线行情并计算五层反转信号
   </div>
 
-  <div id="rules"></div>
-</div>
+  <div class="search">
+    <input id="ticker" value="MCD" placeholder="例如 MCD / AAPL / MSFT">
+    <button id="analyzeBtn">分析</button>
+  </div>
 
-<div class="card">
+  <div id="status" class="status"></div>
 
-<h2>1. 价格与均线</h2>
+  <div id="result" class="hidden">
 
-<div class="grid">
+    <div class="card">
+      <div class="headline">
+        <div>
+          <div id="symbol" class="symbol"></div>
+          <div id="marketInfo" class="verdict"></div>
+        </div>
 
-<div class="field">
-<label>收盘价</label>
-<input id="close" type="number" value="287" step="0.01">
-</div>
+        <div id="score" class="score"></div>
+      </div>
 
-<div class="field">
-<label>MA5</label>
-<input id="ma5" type="number" value="267" step="0.01">
-</div>
+      <div id="verdict" class="verdict"></div>
 
-<div class="field">
-<label>MA10</label>
-<input id="ma10" type="number" value="239" step="0.01">
-</div>
+      <div class="metrics">
+        <div class="metric">
+          <small>收盘价</small>
+          <strong id="close"></strong>
+        </div>
 
-<div class="field">
-<label>MA20</label>
-<input id="ma20" type="number" value="218" step="0.01">
-</div>
+        <div class="metric">
+          <small>MA5</small>
+          <strong id="ma5"></strong>
+        </div>
 
-<div class="field">
-<label>MA60</label>
-<input id="ma60" type="number" value="276" step="0.01">
-</div>
+        <div class="metric">
+          <small>MA10</small>
+          <strong id="ma10"></strong>
+        </div>
 
-<div class="field">
-<label>成交量比率</label>
-<input id="volume" type="number" value="1.0" step="0.1">
-</div>
+        <div class="metric">
+          <small>MA20</small>
+          <strong id="ma20"></strong>
+        </div>
 
-</div>
-</div>
+        <div class="metric">
+          <small>MA60</small>
+          <strong id="ma60"></strong>
+        </div>
 
-<div class="card">
+        <div class="metric">
+          <small>成交量 / 20日均量</small>
+          <strong id="volumeRatio"></strong>
+        </div>
+      </div>
+    </div>
 
-<h2>2. 技术信号</h2>
+    <div id="layers" class="card"></div>
 
-<label class="check">
-<input type="checkbox" id="ma60up">
-MA60 最近5日斜率为正
-</label>
+    <div class="note">
+      本工具使用规则化技术指标识别潜在反转信号，仅用于研究和筛选，
+      不构成投资建议。盘中数据可能尚未形成完整日K线。
+    </div>
 
-<label class="check">
-<input type="checkbox" id="ma5up">
-MA5 连续3日上升
-</label>
-
-<label class="check">
-<input type="checkbox" id="cross">
-MA5 今日上穿 MA10
-</label>
-
-<hr style="border-color:#333">
-
-<label>止跌K线形态</label>
-
-<select id="pattern">
-<option value="none">没有明显形态</option>
-<option value="hammer">长下影线 / 锤子线</option>
-<option value="engulf">阳包阴</option>
-<option value="morning">晨星</option>
-</select>
-
-<br><br>
-
-<label class="check">
-<input type="checkbox" id="nolow">
-连续3个交易日没有再创新低
-</label>
-
-<label class="check">
-<input type="checkbox" id="bull">
-出现实体涨幅至少2%的阳线
-</label>
-
-</div>
-
-<div class="card">
-<div class="note">
-当前版本用于验证五层反转判断逻辑，并非实时行情。
-下一阶段将加入真实美股/加拿大股票数据、走势图以及历史回测。
-</div>
-</div>
+  </div>
 
 </div>
 
 <script>
+const API =
+  "https://stock-reversal-api.cynthia-fan-138.workers.dev/";
 
-const ids = [
- "close","ma5","ma10","ma20","ma60","volume",
- "ma60up","ma5up","cross","pattern","nolow","bull"
-];
+const $ = id => document.getElementById(id);
 
-ids.forEach(id => {
- document.getElementById(id).addEventListener("input", calculate);
- document.getElementById(id).addEventListener("change", calculate);
-});
-
-function calculate(){
-
- const close = +document.getElementById("close").value;
- const ma5 = +document.getElementById("ma5").value;
- const ma10 = +document.getElementById("ma10").value;
- const ma20 = +document.getElementById("ma20").value;
- const ma60 = +document.getElementById("ma60").value;
- const volume = +document.getElementById("volume").value;
-
- const ma60up = document.getElementById("ma60up").checked;
- const ma5up = document.getElementById("ma5up").checked;
- const cross = document.getElementById("cross").checked;
- const pattern = document.getElementById("pattern").value;
- const nolow = document.getElementById("nolow").checked;
- const bull = document.getElementById("bull").checked;
-
- /*
- Five-layer logic
- */
-
- const layer1 =
-   close > ma60 &&
-   ma60up;
-
- const layer2 =
-   ma5up &&
-   cross &&
-   ma5 > ma10;
-
- const layer3 =
-   volume >= 1.5 &&
-   close > ma20;
-
- const layer4 =
-   pattern !== "none";
-
- const layer5 =
-   nolow &&
-   bull &&
-   volume >= 1.5;
-
- const results = [
-   ["长期趋势转好", layer1],
-   ["短期均线金叉", layer2],
-   ["放量站上 MA20", layer3],
-   ["出现止跌 K 线", layer4],
-   ["三日止跌 + 放量中阳", layer5]
- ];
-
- const score = results.filter(x => x[1]).length;
-
- document.getElementById("score").textContent = score;
- document.getElementById("progress").style.width =
-   (score / 5 * 100) + "%";
-
- let status = "等待确认";
-
- if(score === 5) status = "强反转候选";
- else if(score === 4) status = "高度关注";
- else if(score === 3) status = "开始观察";
- else if(score >= 1) status = "等待确认";
-
- document.getElementById("status").textContent = status;
-
- document.getElementById("rules").innerHTML =
-   results.map(r => `
-     <div class="rule">
-       <span>${r[1] ? "✓" : "○"} ${r[0]}</span>
-       <span class="${r[1] ? "pass":"fail"}">
-         ${r[1] ? "通过":"未通过"}
-       </span>
-     </div>
-   `).join("");
+function avg(arr) {
+  return arr.reduce((a, b) => a + b, 0) / arr.length;
 }
 
-calculate();
+function sma(data, endIndex, period, field = "close") {
+  const start = endIndex - period + 1;
 
+  if (start < 0) return null;
+
+  return avg(
+    data.slice(start, endIndex + 1).map(x => x[field])
+  );
+}
+
+function pct(n) {
+  return (n * 100).toFixed(2) + "%";
+}
+
+function money(n) {
+  return Number(n).toFixed(2);
+}
+
+function detectHammer(d) {
+  const body = Math.abs(d.close - d.open);
+  const range = d.high - d.low;
+
+  if (range <= 0) return false;
+
+  const lowerShadow =
+    Math.min(d.open, d.close) - d.low;
+
+  const upperShadow =
+    d.high - Math.max(d.open, d.close);
+
+  const effectiveBody = Math.max(body, range * 0.05);
+
+  return (
+    lowerShadow >= effectiveBody * 2 &&
+    upperShadow <= effectiveBody &&
+    Math.max(d.open, d.close) >= d.low + range * 0.6
+  );
+}
+
+function detectBullishEngulfing(prev, cur) {
+  return (
+    prev.close < prev.open &&
+    cur.close > cur.open &&
+    cur.open <= prev.close &&
+    cur.close >= prev.open
+  );
+}
+
+function detectMorningStar(a, b, c) {
+  const bodyA = Math.abs(a.close - a.open);
+  const bodyB = Math.abs(b.close - b.open);
+
+  const firstBearish = a.close < a.open;
+  const thirdBullish = c.close > c.open;
+
+  const smallMiddle =
+    bodyB <= bodyA * 0.5;
+
+  const midpointA =
+    (a.open + a.close) / 2;
+
+  return (
+    firstBearish &&
+    smallMiddle &&
+    thirdBullish &&
+    c.close > midpointA
+  );
+}
+
+function verdict(score) {
+  if (score >= 5) return "强反转候选";
+  if (score >= 4) return "高度关注";
+  if (score >= 2) return "开始观察";
+  return "等待确认";
+}
+
+function layerHTML(pass, number, title, detail) {
+  return `
+    <div class="layer">
+      <div class="badge ${pass ? "pass" : "fail"}">
+        ${pass ? "✓" : "×"}
+      </div>
+
+      <div>
+        <div class="layer-title">
+          第${number}层 · ${title}
+        </div>
+
+        <div class="detail">
+          ${detail}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function analyze() {
+
+  const ticker =
+    $("ticker").value.trim().toUpperCase();
+
+  if (!ticker) return;
+
+  $("analyzeBtn").disabled = true;
+  $("status").className = "status";
+  $("status").textContent = "正在读取行情并计算……";
+  $("result").classList.add("hidden");
+
+  try {
+
+    const response =
+      await fetch(API + "?symbol=" + encodeURIComponent(ticker));
+
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      throw new Error(
+        data.error || "无法取得行情数据"
+      );
+    }
+
+    const p = data.prices;
+
+    if (!Array.isArray(p) || p.length < 65) {
+      throw new Error("历史数据不足，无法计算 MA60。");
+    }
+
+    const i = p.length - 1;
+    const today = p[i];
+    const yesterday = p[i - 1];
+    const twoDaysAgo = p[i - 2];
+
+    const ma5 = sma(p, i, 5);
+    const ma10 = sma(p, i, 10);
+    const ma20 = sma(p, i, 20);
+    const ma60 = sma(p, i, 60);
+
+    const ma5Prev = sma(p, i - 1, 5);
+    const ma10Prev = sma(p, i - 1, 10);
+
+    const ma5TwoDaysAgo =
+      sma(p, i - 2, 5);
+
+    const ma60FiveDaysAgo =
+      sma(p, i - 5, 60);
+
+    /*
+      Average volume uses the PRIOR 20 completed bars,
+      excluding the current bar.
+    */
+    const prior20Volumes =
+      p.slice(i - 20, i).map(x => x.volume);
+
+    const avgVol20 =
+      avg(prior20Volumes);
+
+    const volumeRatio =
+      today.volume / avgVol20;
+
+    // Layer 1
+    const priceAboveMA60 =
+      today.close > ma60;
+
+    const ma60Rising =
+      ma60 > ma60FiveDaysAgo;
+
+    const layer1 =
+      priceAboveMA60 && ma60Rising;
+
+    // Layer 2
+    const ma5Rising =
+      ma5 > ma5Prev &&
+      ma5Prev > ma5TwoDaysAgo;
+
+    const bullishCross =
+      ma5 > ma10 &&
+      ma5Prev <= ma10Prev;
+
+    const layer2 =
+      ma5Rising && bullishCross;
+
+    // Layer 3
+    const highVolume =
+      volumeRatio >= 1.5;
+
+    const aboveMA20 =
+      today.close > ma20;
+
+    const layer3 =
+      highVolume && aboveMA20;
+
+    // Layer 4
+    const hammer =
+      detectHammer(today);
+
+    const engulfing =
+      detectBullishEngulfing(
+        yesterday,
+        today
+      );
+
+    const morningStar =
+      detectMorningStar(
+        twoDaysAgo,
+        yesterday,
+        today
+      );
+
+    const layer4 =
+      hammer || engulfing || morningStar;
+
+    let patternText = "未识别到指定反转K线";
+
+    if (hammer)
+      patternText = "锤头形态";
+
+    if (engulfing)
+      patternText = "看涨吞没";
+
+    if (morningStar)
+      patternText = "Morning Star";
+
+    // Layer 5
+    /*
+      Latest three lows must not make a new low
+      versus the low immediately preceding them.
+    */
+    const referenceLow =
+      p[i - 3].low;
+
+    const noNewLow =
+      p[i - 2].low >= referenceLow &&
+      p[i - 1].low >= referenceLow &&
+      p[i].low >= referenceLow;
+
+    const bullishBody =
+      today.close > today.open &&
+      (today.close - today.open) /
+        today.open >= 0.02;
+
+    const layer5 =
+      noNewLow &&
+      bullishBody &&
+      highVolume;
+
+    const layers = [
+      layer1,
+      layer2,
+      layer3,
+      layer4,
+      layer5
+    ];
+
+    const score =
+      layers.filter(Boolean).length;
+
+    $("symbol").textContent =
+      data.symbol;
+
+    $("marketInfo").textContent =
+      `${data.exchange || "US"} · ${today.date}`;
+
+    $("score").textContent =
+      `${score}/5`;
+
+    $("verdict").textContent =
+      verdict(score);
+
+    $("close").textContent =
+      "$" + money(today.close);
+
+    $("ma5").textContent =
+      money(ma5);
+
+    $("ma10").textContent =
+      money(ma10);
+
+    $("ma20").textContent =
+      money(ma20);
+
+    $("ma60").textContent =
+      money(ma60);
+
+    $("volumeRatio").textContent =
+      volumeRatio.toFixed(2) + "×";
+
+    $("layers").innerHTML =
+
+      layerHTML(
+        layer1,
+        1,
+        "长期趋势",
+        `收盘 ${money(today.close)} ${priceAboveMA60 ? ">" : "≤"} MA60 ${money(ma60)}；
+         MA60 ${ma60Rising ? "向上" : "尚未向上"}`
+      )
+
+      +
+
+      layerHTML(
+        layer2,
+        2,
+        "短期均线转强",
+        `MA5 ${ma5Rising ? "连续走高" : "未连续走高"}；
+         ${bullishCross ? "今日上穿 MA10" : "今日没有形成 MA5 上穿 MA10"}`
+      )
+
+      +
+
+      layerHTML(
+        layer3,
+        3,
+        "放量突破",
+        `成交量为过去20日均量的 ${volumeRatio.toFixed(2)}×；
+         收盘 ${aboveMA20 ? "高于" : "未高于"} MA20`
+      )
+
+      +
+
+      layerHTML(
+        layer4,
+        4,
+        "反转K线",
+        patternText
+      )
+
+      +
+
+      layerHTML(
+        layer5,
+        5,
+        "三日确认",
+        `三日${noNewLow ? "未创新低" : "出现新低"}；
+         今日阳线实体 ${pct((today.close - today.open) / today.open)}；
+         成交量 ${highVolume ? "达到" : "未达到"} 1.5×`
+      );
+
+    $("status").textContent =
+      `已读取 ${p.length} 个交易日数据`;
+
+    $("result").classList.remove("hidden");
+
+  } catch (err) {
+
+    $("status").className =
+      "status error";
+
+    $("status").textContent =
+      "分析失败：" + err.message;
+
+  } finally {
+
+    $("analyzeBtn").disabled = false;
+
+  }
+}
+
+$("analyzeBtn").addEventListener(
+  "click",
+  analyze
+);
+
+$("ticker").addEventListener(
+  "keydown",
+  e => {
+    if (e.key === "Enter") analyze();
+  }
+);
 </script>
 
 </body>
