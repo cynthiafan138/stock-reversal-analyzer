@@ -409,10 +409,57 @@ async function analyze() {
       throw new Error("历史数据不足，无法计算 MA60。");
     }
 
-    const i = p.length - 1;
-    const today = p[i];
-    const yesterday = p[i - 1];
-    const twoDaysAgo = p[i - 2];
+    // Determine whether the newest daily bar is still today's intraday bar.
+// If so, exclude it from the official reversal score.
+const now = new Date();
+
+const nyDate = new Intl.DateTimeFormat(
+  "en-CA",
+  {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }
+).format(now);
+
+const nyTime = new Intl.DateTimeFormat(
+  "en-US",
+  {
+    timeZone: "America/New_York",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }
+).format(now);
+
+const [hour, minute] =
+  nyTime.split(":").map(Number);
+
+const minutesNow =
+  hour * 60 + minute;
+
+// Normal US market close = 16:00 New York time.
+// Add 15 minutes as a safety buffer for final daily-bar updates.
+const marketDataComplete =
+  minutesNow >= 16 * 60 + 15;
+
+const latestBar = p[p.length - 1];
+
+const latestIsToday =
+  latestBar.date === nyDate;
+
+const usingPriorClose =
+  latestIsToday && !marketDataComplete;
+
+// i is the bar used for the official five-layer score.
+const i = usingPriorClose
+  ? p.length - 2
+  : p.length - 1;
+
+const today = p[i];
+const yesterday = p[i - 1];
+const twoDaysAgo = p[i - 2];
 
     const ma5 = sma(p, i, 5);
     const ma10 = sma(p, i, 10);
@@ -541,8 +588,13 @@ async function analyze() {
     $("symbol").textContent =
       data.symbol;
 
-    $("marketInfo").textContent =
-      `${data.exchange || "US"} · ${today.date}`;
+   $("marketInfo").innerHTML =
+  usingPriorClose
+    ? `${data.exchange || "US"} · 正式评分基于 ${today.date} 收盘<br>
+       <span style="color:#e5b85c">
+         盘中参考：${latestBar.date} · $${money(latestBar.close)}
+       </span>`
+    : `${data.exchange || "US"} · 正式评分基于 ${today.date} 收盘`;
 
     $("score").textContent =
       `${score}/5`;
